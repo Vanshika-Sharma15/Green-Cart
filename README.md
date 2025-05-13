@@ -41,10 +41,6 @@ Green Cart allows sellers to showcase their products to a wider audience. If you
 - **Track orders and sales** via the seller dashboard.
 - **Manage inventory** efficiently.
 
-To become a seller:
-1. Sign up on Green Cart and select the seller option.
-2. Set up your store and upload product details.
-3. Start selling to customers right away!
 
 ---
 
