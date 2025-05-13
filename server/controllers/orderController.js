@@ -1,9 +1,7 @@
-import paypal from "@paypal/checkout-server-sdk";
-import { client } from "../configs/paypal.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
-
+import stripe from "stripe";
 // Place Order COD: /api/order/cod
 export const placeOrderCOD = async (req, res) => {
   try {
@@ -32,149 +30,118 @@ export const placeOrderCOD = async (req, res) => {
   }
 };
 
-export const createPayPalOrder = async (req, res) => {
+// Place Order stripe: /api/order/stripe
+export const placeOrderStripe = async (req, res) => {
   try {
-    const { items } = req.body;
-
-    let total = 0;
-    for (const item of items) {
+    const { userId, items, address } = req.body;
+    const { origin } = req.headers;
+    if (!address || items.length === 0) {
+      return res.json({ success: false, message: "Invalid data" });
+    }
+    let productData = [];
+    // Calculate Amount Using Items
+    let amount = await items.reduce(async (acc, item) => {
       const product = await Product.findById(item.product);
-      total += product.offerPrice * item.quantity;
-    }
+      productData.push({
+        name: product.name,
+        price: product.offerPrice,
+        quantity: item.quantity,
+      });
+      return (await acc) + product.offerPrice * item.quantity;
+    }, 0);
+    // Add Tax Charge (2%)
+    amount += Math.floor(amount * 0.02);
 
-    total += Math.floor(total * 0.02); // Add 2% tax
-
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.requestBody({
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          amount: {
-            currency_code: "USD",
-            value: total.toFixed(2),
-          },
-        },
-      ],
-    });
-
-    const order = await client().execute(request);
-    res.json({ success: true, orderID: order.result.id });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-//webhook paypal
-export const paypalWebhook = async (req, res) => {
-  try {
-    const webhookId = "YOUR_PAYPAL_WEBHOOK_ID"; // TODO: Replace this with your actual webhook ID from PayPal dashboard
-    const transmissionId = req.headers["paypal-transmission-id"];
-    const transmissionTime = req.headers["paypal-transmission-time"];
-    const certUrl = req.headers["paypal-cert-url"];
-    const authAlgo = req.headers["paypal-auth-algo"];
-    const transmissionSig = req.headers["paypal-transmission-sig"];
-    const webhookEventBody = req.body;
-
-    // Construct the Webhook signature verification request
-    const verifyReq =
-      new paypal.notifications.webhookEventVerifySignatureRequest();
-    verifyReq.requestBody({
-      auth_algo: authAlgo,
-      cert_url: certUrl,
-      transmission_id: transmissionId,
-      transmission_sig: transmissionSig,
-      transmission_time: transmissionTime,
-      webhook_id: webhookId,
-      webhook_event: webhookEventBody,
-    });
-
-    // Verify the webhook signature to confirm the event is from PayPal
-    const verifyResponse = await client().execute(verifyReq);
-
-    if (verifyResponse.result.verification_status !== "SUCCESS") {
-      // Invalid webhook signature
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid webhook signature" });
-    }
-
-    const eventType = webhookEventBody.event_type;
-    // Handle different webhook event types
-    switch (eventType) {
-      case "PAYMENT.CAPTURE.COMPLETED":
-        // Payment capture succeeded
-        const captureId = webhookEventBody.resource.id;
-        // Find order by transactionId and mark as paid
-        const order = await Order.findOne({ transactionId: captureId });
-        if (order) {
-          order.isPaid = true;
-          await order.save();
-          console.log(
-            `Order ${order._id} marked as paid (PayPal capture ID: ${captureId})`
-          );
-        }
-        break;
-
-      case "PAYMENT.CAPTURE.DENIED":
-        // Payment capture denied, mark order as unpaid or handle accordingly
-        const deniedCaptureId = webhookEventBody.resource.id;
-        const deniedOrder = await Order.findOne({
-          transactionId: deniedCaptureId,
-        });
-        if (deniedOrder) {
-          deniedOrder.isPaid = false;
-          await deniedOrder.save();
-          console.log(
-            `Order ${deniedOrder._id} marked as unpaid (PayPal capture denied ID: ${deniedCaptureId})`
-          );
-        }
-        break;
-
-      // Add more event types as needed
-      default:
-        console.log(`Unhandled PayPal webhook event type: ${eventType}`);
-    }
-
-    // Respond 200 OK to acknowledge receipt
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("Error processing PayPal webhook:", error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// Capture PayPal Order
-export const capturePayPalOrder = async (req, res) => {
-  try {
-    const { orderID, userId, address, items } = req.body;
-
-    const request = new paypal.orders.OrdersCaptureRequest(orderID);
-    request.requestBody({});
-
-    const capture = await client().execute(request);
-
-    // Calculate amount again
-    let total = 0;
-    for (const item of items) {
-      const product = await Product.findById(item.product);
-      total += product.offerPrice * item.quantity;
-    }
-
-    total += Math.floor(total * 0.02);
-
-    await Order.create({
+    const order = await Order.create({
       userId,
       items,
-      amount: total,
+      amount,
       address,
       paymentType: "Online",
-      isPaid: true,
-      transactionId: orderID,
+    });
+    // Stripe Gateway Initialize
+    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+    // create line items for stripe
+    const line_items = productData.map((item) => {
+      return {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.name,
+          },
+          unit_amount: Math.floor(item.price + item.price * 0.02) * 100,
+        },
+        quantity: item.quantity,
+      };
+    });
+    // create session
+    const session = await stripeInstance.checkout.sessions.create({
+      line_items,
+      mode: "payment",
+      success_url: `${origin}/loader?next=my-orders`,
+      cancel_url: `${origin}/cart`,
+      metadata: {
+        orderId: order._id.toString(),
+        userId,
+      },
     });
 
-    res.json({ success: true, message: "Payment captured & order placed" });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    return res.json({ success: true, url: session.url });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
   }
+};
+
+//webhook to verify payment action :/stripe
+export const stripeWebhooks = async (request, response) => {
+  // Stripe Gateway Initialize
+  const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+  const sig = request.headers["stripe-signature"];
+  let event;
+  try {
+    event = stripeInstance.webhooks.constructEvent(
+      request.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (error) {
+    response.status(400).send(`Webhook Error: ${error.message}`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case "payment_intent.succeeded": {
+      const paymentIntent = event.data.object;
+      const paymentIntentId = paymentIntent.id;
+      // Getting Session Metadata
+      const session = await stripeInstance.checkout.sessions.list({
+        payment_intent: paymentIntentId,
+      });
+      const { orderId, userId } = session.data[0].metadata;
+      // Mark Payment as Paid
+      await Order.findByIdAndUpdate(orderId, { isPaid: true });
+      // Clear user cart
+      await User.findByIdAndUpdate(userId, { cartItems: {} });
+      break;
+    }
+    case "payment_intent.payment_failed": {
+      const paymentIntent = event.data.object;
+      const paymentIntentId = paymentIntent.id;
+      // Getting Session Metadata
+      const session = await stripeInstance.checkout.sessions.list({
+        payment_intent: paymentIntentId,
+      });
+      const { orderId } = session.data[0].metadata;
+      await Order.findByIdAndDelete(orderId);
+      break;
+    }
+
+    default:
+      console.error(`Unhandled event type ${event.type}`);
+      break;
+  }
+  res.json({ received: true });
 };
 
 // Get Orders by User ID: /api/order/user

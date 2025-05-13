@@ -17,7 +17,6 @@ import SellerLayout from "./pages/seller/SellerLayout";
 import AddProduct from "./pages/seller/addProduct";
 import Orders from "./pages/seller/Orders";
 import ProductList from "./pages/seller/ProductList";
-import PaypalCheckout from "./pages/seller/PayPalCheckout";
 import Loading from "./component/Loading";
 const App = () => {
   const isSellerPath = useLocation().pathname.includes("seller");
@@ -48,7 +47,6 @@ const App = () => {
             <Route path="/seller/product-list" element={<ProductList />} />
             <Route path="/seller//orders" element={<Orders />} />
           </Route>
-          <Route path="/paypal-checkout" element={<PaypalCheckout />} />
         </Routes>
       </div>
       {!isSellerPath && <Footer />}

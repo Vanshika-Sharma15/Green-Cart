@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAppContext } from "../context/AppContext";
 import { assets } from "../assets/assets";
 import toast from "react-hot-toast";
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 const Cart = () => {
   const {
@@ -17,16 +16,21 @@ const Cart = () => {
     axios,
     user,
     setCartItems,
+    setShowUserLogin,
   } = useAppContext();
   const [cartArray, setCartArray] = useState([]);
   const [addresses, setAddresses] = useState([]);
   const [showAddress, setShowAddress] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [paymentOption, setPaymentoption] = useState("COD");
-  const [showPaypal, setShowPaypal] = useState(false);
 
   const placeOrder = async () => {
     try {
+      if (!user) {
+        setShowUserLogin(true);
+        return toast.error("Please login to place order");
+      }
+
       if (!selectedAddress) {
         return toast.error("Please select an address");
       }
@@ -49,18 +53,20 @@ const Cart = () => {
           toast.error(data.message);
         }
       } else {
-        // open paypal-checkout in a new tab and pass data using window.open
-        const data = {
+        //place order with stripe
+        const { data } = await axios.post("/api/order/stripe", {
+          userId: user._id,
           items: cartArray.map((item) => ({
             product: item._id,
             quantity: item.quantity,
           })),
-          address: selectedAddress,
-          userId: user._id,
-        };
-
-        const encoded = encodeURIComponent(JSON.stringify(data));
-        window.open(`/paypal-checkout?data=${encoded}`, "_blank");
+          address: selectedAddress._id,
+        });
+        if (data.success) {
+          window.location.replace(data.url);
+        } else {
+          toast.error(data.message);
+        }
       }
     } catch (error) {
       toast.error(error.message);
@@ -96,11 +102,12 @@ const Cart = () => {
     if (products.length > 0 && cartItems) {
       getCart();
     }
-  }, [products, cartItems]);
+  }, [products, cartItems, user]);
 
   useEffect(() => {
     if (user) {
       getUserAddress();
+    } else {
     }
   }, [user]);
 

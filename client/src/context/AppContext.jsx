@@ -10,7 +10,6 @@ axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
 export const AppContext = createContext();
 export const AppContextProvider = ({ children }) => {
   const currency = import.meta.env.VITE_CURRENCY;
-  const clientId = import.meta.env.PAYPAL_CLIENT_ID;
 
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -159,7 +158,6 @@ export const AppContextProvider = ({ children }) => {
     axios,
     fetchProducts,
     setCartItems,
-    clientId,
   };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
