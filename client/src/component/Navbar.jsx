@@ -17,6 +17,10 @@ const Navbar = () => {
     axios,
   } = useAppContext();
 
+  const sellerDashboard = () => {
+    navigate("/seller");
+  };
+
   const logout = async () => {
     try {
       const { data } = await axios.get("/api/user/logout");
@@ -44,9 +48,12 @@ const Navbar = () => {
 
       {/* Desktop Menu */}
       <div className="hidden sm:flex items-center gap-8">
-        {/* <NavLink to="/">Home</NavLink>
-        <NavLink to="/products">All Products</NavLink>
-        <NavLink to="/">Contact</NavLink> */}
+        <button
+          onClick={sellerDashboard}
+          class="border border-gray-300 px-3 py-1 rounded-full text-xs cursor-pointer opacity-80"
+        >
+          Seller Dashboard
+        </button>
         <Link to={"/"}>Home</Link> <Link to={"/products"}> Products</Link>
         <Link to={"/"}>Contact</Link>
         <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-300 px-3 rounded-full">
