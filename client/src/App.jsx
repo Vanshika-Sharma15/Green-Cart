@@ -1,6 +1,6 @@
 import React from "react";
 import { Toaster } from "react-hot-toast";
-import Home from "./pages/home";
+import Home from "./pages/Home";
 import Navbar from "./component/Navbar";
 import { Route, Routes, useLocation } from "react-router-dom";
 import Footer from "./component/Footer";

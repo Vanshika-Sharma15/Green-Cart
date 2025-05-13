@@ -158,7 +158,6 @@ export const getUserOrders = async (req, res) => {
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
-  I;
 };
 
 // Get All Orders (for seller / admin): /api/order/seller
