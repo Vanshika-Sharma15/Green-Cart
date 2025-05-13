@@ -1,7 +1,7 @@
 # Green Cart 🍏
 
 
-Green Cart is a web application designed for seamless online shopping. Built with modern web technologies, it ensures users can browse and purchase items effortlessly.
+Green Cart is a web application designed for seamless online shopping food items. Built with modern web technologies, it ensures users can browse and purchase items effortlessly.
 
 ## Features
 
