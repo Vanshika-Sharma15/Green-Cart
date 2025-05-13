@@ -14,7 +14,7 @@ import AddAddress from "./pages/AddAddress";
 import MyOrders from "./pages/MyOrders";
 import SellerLogin from "./component/seller/SellerLogin";
 import SellerLayout from "./pages/seller/SellerLayout";
-import AddProduct from "./pages/seller/addProduct";
+import AddProduct from "./pages/seller/AddProduct";
 import Orders from "./pages/seller/Orders";
 import ProductList from "./pages/seller/ProductList";
 import Loading from "./component/Loading";
