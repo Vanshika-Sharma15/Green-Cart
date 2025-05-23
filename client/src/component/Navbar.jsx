@@ -55,7 +55,7 @@ const Navbar = () => {
           Seller Dashboard
         </button>
         <Link to={"/"}>Home</Link> <Link to={"/products"}> Products</Link>
-        <Link to={"/"}>Contact</Link>
+        <Link to={"mailto:vanshikasharma0081@gmail.com"}>Contact</Link>
         <div className="hidden lg:flex items-center text-sm gap-2 border border-gray-300 px-3 rounded-full">
           <input
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -109,16 +109,8 @@ const Navbar = () => {
         )}
       </div>
 
-      <button
-        onClick={() => (open ? setOpen(false) : setOpen(true))}
-        aria-label="Menu"
-        className="sm:hidden"
-      >
-        {/* Menu Icon SVG */}
-        <img src={assets.menu_icon} alt="menu" />
-      </button>
-
       {/* Mobile Menu */}
+      {/* Mobile Menu Cart Icon */}
       <div className="flex items-center gap-6 sm:hidden">
         <div
           onClick={() => navigate("/cart")}
@@ -135,11 +127,20 @@ const Navbar = () => {
         </div>
       </div>
 
+      {/* Mobile Hamburger Menu Icon: now after cart icon */}
+      <button
+        onClick={() => (open ? setOpen(false) : setOpen(true))}
+        aria-label="Menu"
+        className="sm:hidden"
+      >
+        <img src={assets.menu_icon} alt="menu" />
+      </button>
+
       {open && (
         <div
           className={`${
             open ? "flex" : "hidden"
-          } absolute top-[60px] left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-sm md:hidden`}
+          } absolute top-[60px] left-0 w-full bg-white shadow-md py-4 flex-col items-start gap-2 px-5 text-sm md:hidden z-50`}
         >
           <NavLink to="/" onClick={() => setOpen(false)} className="block">
             Home
