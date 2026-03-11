@@ -39,6 +39,7 @@ const App = () => {
           <Route path="/add-address" element={<AddAddress />} />
           <Route path="/loader" element={<Loading />} />
           <Route path="/my-orders" element={<MyOrders />} />
+         
           <Route
             path="/seller"
             element={isSeller ? <SellerLayout /> : <SellerLogin />}
